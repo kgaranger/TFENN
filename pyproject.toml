@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "TFENN"
+version = "0.0.1"
+authors = [
+  { name="Kévin Garanger", email="kgarange@uci.edu" },
+]
+description = "A package for tensor feature equivariant neural networks"
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "jax~=0.4.13",
+    "flax~=0.7.2",
+    ]
+
+[project.urls]
+"Homepage" = "https://github.com/kgaranger/TFENN"
+"Bug Tracker" = "https://github.com/kgaranger/TFENN/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["TFENN*"]
+
+[tool.isort]
+src_paths = ["src"]
