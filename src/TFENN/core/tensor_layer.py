@@ -315,7 +315,7 @@ class DenseGateSymmetricTensor(nn.module.Module):
             tuple(range(-n_tensor_axis, 0)), n_axis + n_features + n_red_tensor_axis
         )
         if self.use_bias:
-            bias = self.param("bias", self.bias_init, features)
+            bias = self.param("bias_params", self.bias_init, features)
         else:
             bias = None
         inputs, kernel_params, bias = nn.dtypes.promote_dtype(
