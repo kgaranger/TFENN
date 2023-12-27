@@ -20,6 +20,7 @@ import jax
 import jax.numpy as jnp
 from flax import linen as nn
 
+from TFENN.util import linalg
 from TFENN.util.array_util import canonicalize_tuple, normalize_axes
 from TFENN.util.geometry import angle_to_rot_mat_2d, quat_to_rot_mat_3d
 
@@ -43,7 +44,7 @@ class TensorActivation(nn.module.Module):
 
     @nn.compact
     def __call__(self, inputs):
-        v, u = jnp.linalg.eigh(self.feature_notation.to_full(inputs))
+        v, u = linalg.eigh(self.feature_notation.to_full(inputs))
         v = self.activation(v)
         return self.feature_notation.to_reduced(
             jnp.einsum("...ij,...j,...kj->...ik", u, v, u)
