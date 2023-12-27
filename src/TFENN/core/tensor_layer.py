@@ -105,7 +105,7 @@ class RotateSymmetricTensor(nn.module.Module):
         ndim = inputs.ndim
         axis = normalize_axes(axis, ndim)
         n_axis = len(axis)
-        n_tensor_axis = 1  # Only rank 2 Mandel tensors are supported
+        n_tensor_axis = 1  # Only order 2 Mandel tensors are supported
         tensor_axis = normalize_axes(range(-n_tensor_axis, 0), ndim)
         if len(set(axis) & set(tensor_axis)) != 0:
             raise ValueError(
@@ -129,7 +129,7 @@ class RotateSymmetricTensor(nn.module.Module):
             raise NotImplementedError
 
         mandel_rotation = (
-            MandelNotation(rank=4, dim=self.dim).to_reduced(
+            MandelNotation(order=4, dim=self.dim).to_reduced(
                 rot_mat[:, None, :, None] * rot_mat[None, :, None, :]
                 + rot_mat[None, :, :, None] * rot_mat[:, None, None, :]
             )
@@ -147,9 +147,9 @@ class RotateSymmetricTensor(nn.module.Module):
 
 class DenseSymmetricTensor(nn.module.Module):
     """Dense layer for symmetric tensors.
-    :param kernel_rep: the representation of the rank 4 kernel tensor.
+    :param kernel_rep: the representation of the order 4 kernel tensor.
     :type kernel_rep: SymmetricTensorRepresentation
-    :param bias_rep: the representation of the rank 2 bias tensor.
+    :param bias_rep: the representation of the order 2 bias tensor.
     :type bias_rep: SymmetricTensorRepresentation
     :param features: the number or shape of output features.
     :type features: int or tuple
@@ -198,7 +198,7 @@ class DenseSymmetricTensor(nn.module.Module):
         axis = normalize_axes(axis, ndim)
         n_axis = len(axis)
         n_features = len(features)
-        n_tensor_axis = 1  # Only rank 2 Mandel tensors are supported
+        n_tensor_axis = 1  # Only order 2 Mandel tensors are supported
         tensor_axis = normalize_axes(range(-n_tensor_axis, 0), ndim)
         n_red_tensor_axis = len(self.kernel_rep.notation.reduced_shape)  # Should be 2
         if len(set(axis) & set(tensor_axis)) != 0:
@@ -246,7 +246,7 @@ class DenseSymmetricTensor(nn.module.Module):
 
 class DenseGateSymmetricTensor(nn.module.Module):
     """Dense gate layer for symmetric tensors.
-    :param kernel_rep: the representation of the rank 2 kernel tensor.
+    :param kernel_rep: the representation of the order 2 kernel tensor.
     :type kernel_rep: SymmetricTensorRepresentation
     :param features: the number or shape of output features.
     :type features: int or tuple
@@ -294,7 +294,7 @@ class DenseGateSymmetricTensor(nn.module.Module):
         axis = normalize_axes(axis, ndim)
         n_axis = len(axis)
         n_features = len(features)
-        n_tensor_axis = 1  # Only rank 2 Mandel tensors are supported
+        n_tensor_axis = 1  # Only order 2 Mandel tensors are supported
         tensor_axis = normalize_axes(range(-n_tensor_axis, 0), ndim)
         n_red_tensor_axis = len(self.kernel_rep.notation.reduced_shape)  # Should be 1
         if len(set(axis) & set(tensor_axis)) != 0:
@@ -385,7 +385,7 @@ class GRUCellSymmetricTensor(nn.RNNCellBase):
 
     def setup(self):
         self.feature_notation = SymmetricTensorNotationType.MANDEL.create(
-            rank=2, dim=self.kernel_rep.dim
+            order=2, dim=self.kernel_rep.dim
         )
 
     @nn.compact
