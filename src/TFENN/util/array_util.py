@@ -15,7 +15,7 @@
 from typing import Iterable, Sequence
 
 
-def normalize_axes(axes: tuple[int, ...], ndim: int) -> tuple[int, ...]:
+def normalize_axes(axes: Iterable[int], ndim: int) -> tuple[int, ...]:
     # A tuple by convention. len(axes_tuple) then also gives the rank efficiently.
     return tuple(sorted(ax if ax >= 0 else ndim + ax for ax in axes))
 

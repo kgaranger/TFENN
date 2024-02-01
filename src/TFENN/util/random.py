@@ -1,4 +1,4 @@
-# Copyright 2023 Kévin Garanger
+# Copyright 2024 Kévin Garanger
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,14 +17,13 @@ from typing import Any, Sequence
 from jax import Array
 from jax import numpy as jnp
 from jax import random
-from jax.typing import ArrayLike
 
 from .array_util import canonicalize_tuple
 from .geometry import axis_angle_to_rot_mat_3d
 
-Shape = Sequence[int]
+Shape = Sequence[int] | int
 
-KeyArrayLike = ArrayLike
+KeyArray = Array
 RealArray = Array
 
 
@@ -80,10 +79,10 @@ def chiralOctahedralR3() -> RealArray:
     )
 
 
-def uniformSO2(key: KeyArrayLike, shape: Shape = 1, dtype: Any = float) -> RealArray:
+def uniformSO2(key: KeyArray, shape: Shape = 1, dtype: Any = float) -> RealArray:
     """Sample uniform matrices in SO2.
     :param key: random
-    :type key: KeyArrayLike
+    :type key: KeyArray
     :param shape: shape of the array of matrices, defaults to 1. Output shape is
     (shape, 2, 2)
     :type shape: Shape, optional
@@ -102,10 +101,10 @@ def uniformSO2(key: KeyArrayLike, shape: Shape = 1, dtype: Any = float) -> RealA
     ).reshape(shape + (2, 2))
 
 
-def uniformO2(key: KeyArrayLike, shape: Shape = 1, dtype: Any = float) -> RealArray:
+def uniformO2(key: KeyArray, shape: Shape = 1, dtype: Any = float) -> RealArray:
     """Sample uniform matrices in O2.
     :param key: random key
-    :type key: KeyArrayLike
+    :type key: KeyArray
     :param shape: shape of the array of matrices, defaults to 1. Output shape is
     (shape, 2, 2)
     :type shape: Shape, optional
@@ -122,10 +121,10 @@ def uniformO2(key: KeyArrayLike, shape: Shape = 1, dtype: Any = float) -> RealAr
     return so2.at[neg_dets, 0, :].set(so2[neg_dets, 0, :] * -1)
 
 
-def uniformSO3(key: KeyArrayLike, shape: Shape = 1, dtype: Any = float) -> RealArray:
+def uniformSO3(key: KeyArray, shape: Shape = 1, dtype: Any = float) -> RealArray:
     """Sample uniform matrices in SO3.
     :param key: random key
-    :type key: KeyArrayLike
+    :type key: KeyArray
     :param shape: shape of the array of matrices, defaults to 1. Output shape is
     (shape, 3, 3)
     :type shape: Shape, optional
@@ -153,10 +152,10 @@ def uniformSO3(key: KeyArrayLike, shape: Shape = 1, dtype: Any = float) -> RealA
     return jnp.stack([v1s, v2s, v3s], axis=-1)
 
 
-def uniformO3(key: KeyArrayLike, shape: Shape = 1, dtype: Any = float) -> RealArray:
+def uniformO3(key: KeyArray, shape: Shape = 1, dtype: Any = float) -> RealArray:
     """Sample uniform matrices in O3.
     :param key: random key
-    :type key: KeyArrayLike
+    :type key: KeyArray
     :param shape: shape of the array of matrices, defaults to 1. Output shape is
     (shape, 3, 3)
     :type shape: Shape, optional
@@ -174,7 +173,7 @@ def uniformO3(key: KeyArrayLike, shape: Shape = 1, dtype: Any = float) -> RealAr
 
 
 def uniformCyclicR2(
-    key: KeyArrayLike,
+    key: KeyArray,
     n: int,
     shape: Shape = 1,
     replace: bool = True,
@@ -182,7 +181,7 @@ def uniformCyclicR2(
 ) -> RealArray:
     """Sample matrices of SO(2) from the representation of the cyclic group C_n.
     :param key: random key
-    :type key: KeyArrayLike
+    :type key: KeyArray
     :param n: order of the cyclic group
     :type n: int
     :param shape: shape of the array of matrices, defaults to 1. Output shape is
@@ -210,7 +209,7 @@ def uniformCyclicR2(
 
 
 def uniformDihedralR2(
-    key: KeyArrayLike,
+    key: KeyArray,
     n: int,
     shape: Shape = 1,
     replace: bool = True,
@@ -218,7 +217,7 @@ def uniformDihedralR2(
 ) -> RealArray:
     """Sample matrices of O(2) from the representation of the dihedral group D_n.
     :param key: random key
-    :type key: KeyArrayLike
+    :type key: KeyArray
     :param n: order of the dihedral group
     :type n: int
     :param shape: shape of the array of matrices, defaults to 1. Output shape is
@@ -248,11 +247,11 @@ def uniformDihedralR2(
 
 
 def uniformChiralOctahedralR3(
-    key: KeyArrayLike, shape: Shape = 1, replace: bool = True
+    key: KeyArray, shape: Shape = 1, replace: bool = True
 ) -> RealArray:
     """Sample matrices of SO(3) from the representation of the chiral octahedral group.
     :param key: random
-    :type key: KeyArrayLike
+    :type key: KeyArray
     :param shape: shape of the array of matrices, defaults to 1. Output shape is
     (shape, 3, 3)
     :type shape: Shape, optional
@@ -270,11 +269,11 @@ def uniformChiralOctahedralR3(
 
 
 def uniformOctahedralR3(
-    key: KeyArrayLike, shape: Shape = 1, replace: bool = True
+    key: KeyArray, shape: Shape = 1, replace: bool = True
 ) -> RealArray:
     """Sample matrices of O(3) from the representation of the octahedral group.
     :param key: random
-    :type key: KeyArrayLike
+    :type key: KeyArray
     :param shape: shape of the array of matrices, defaults to 1. Output shape is
     (shape, 3, 3)
     :type shape: Shape, optional

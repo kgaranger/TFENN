@@ -1,4 +1,4 @@
-# Copyright 2023 Kévin Garanger
+# Copyright 2024 Kévin Garanger
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,6 +19,8 @@ from typing import Any
 import jax
 import jax.numpy as jnp
 from flax import linen as nn
+from flax.linen.dtypes import promote_dtype
+from jax.typing import DTypeLike
 
 from TFENN.util import linalg
 from TFENN.util.array_util import canonicalize_tuple, normalize_axes
@@ -28,22 +30,21 @@ from .symmetric_tensor_representation import (MandelNotation,
                                               SymmetricTensorNotation,
                                               SymmetricTensorNotationType,
                                               SymmetricTensorRepresentation)
-from .tensor_symmetry_class import TensorSymmetryClassType
 
 
 class TensorActivation(nn.module.Module):
     """Activation function that applies to the eigenvalues of tensor features
     :param activation: Activation function to apply to the eigenvalues.
-    :type activation nn.module.Module
+    :type activation: Callable[..., Any]
     :param feature_notation: Notation of the features.
     :type feature_notation: TensorNotation
     """
 
-    activation: nn.Module
+    activation: Callable[..., Any]
     feature_notation: SymmetricTensorNotation
 
     @nn.compact
-    def __call__(self, inputs):
+    def __call__(self, inputs: jax.Array, *args, **kwargs) -> jax.Array:  # type: ignore
         v, u = linalg.eigh(self.feature_notation.to_full(inputs))
         v = self.activation(v)
         return self.feature_notation.to_reduced(
@@ -91,21 +92,20 @@ class RotateSymmetricTensor(nn.module.Module):
     dim: int
     axis: int | Sequence[int] = -2
     dtype: jnp.dtype | None = None
-    param_dtype: jnp.dtype | None = float
+    param_dtype: DTypeLike | None = float
     precision: None | str | jax.lax.Precision | tuple[str, str] | tuple[
         jax.lax.Precision, jax.lax.Precision
     ] = None
     rotation_init: Callable[
-        [jax.random.PRNGKey, tuple[int, int], Any], Any
+        [jax.Array, tuple[int, int], Any], Any
     ] = nn.initializers.lecun_normal()
     dot_general: Callable[..., Any] = jax.lax.dot_general
 
     @nn.compact
-    def __call__(self, inputs, transpose: bool = False):
+    def __call__(self, inputs: jax.Array, transpose: bool, *args, **kwargs) -> jax.Array:  # type: ignore
         axis = canonicalize_tuple(self.axis)
         ndim = inputs.ndim
         axis = normalize_axes(axis, ndim)
-        n_axis = len(axis)
         n_tensor_axis = 1  # Only order 2 Mandel tensors are supported
         tensor_axis = normalize_axes(range(-n_tensor_axis, 0), ndim)
         if len(set(axis) & set(tensor_axis)) != 0:
@@ -120,7 +120,7 @@ class RotateSymmetricTensor(nn.module.Module):
             ((1 if self.dim == 2 else 4), 1),
         )[:, 0]
 
-        inputs, rot = nn.dtypes.promote_dtype(inputs, rot, dtype=self.dtype)
+        inputs, rot = promote_dtype(inputs, rot, dtype=self.dtype)
 
         if self.dim == 2:
             rot_mat = angle_to_rot_mat_2d(rot[0])
@@ -179,20 +179,20 @@ class DenseSymmetricTensor(nn.module.Module):
     axis: int | Sequence[int] = -2
     use_bias: bool = True
     dtype: jnp.dtype | None = None
-    param_dtype: jnp.dtype | None = float
+    param_dtype: DTypeLike | None = float
     precision: None | str | jax.lax.Precision | tuple[str, str] | tuple[
         jax.lax.Precision, jax.lax.Precision
     ] = None
     kernel_init: Callable[
-        [jax.random.PRNGKey, tuple[int, int], Any], Any
+        [jax.Array, tuple[int, int], Any], Any
     ] = nn.initializers.lecun_normal()
     bias_init: Callable[
-        [jax.random.PRNGKey, tuple[int], Any], Any
+        [jax.Array, tuple[int], Any], Any
     ] = nn.initializers.zeros_init()
     dot_general: Callable[..., Any] = jax.lax.dot_general
 
     @nn.compact
-    def __call__(self, inputs, tensor_basis: jnp.ndarray | None = None):
+    def __call__(self, inputs: jax.Array, tensor_basis: jax.Array | None = None, *args, **kwargs) -> jax.Array:  # type: ignore
         features = canonicalize_tuple(self.features)
         axis = canonicalize_tuple(self.axis)
         ndim = inputs.ndim
@@ -229,7 +229,7 @@ class DenseSymmetricTensor(nn.module.Module):
             )
         else:
             bias_params = None
-        inputs, kernel_params, bias_params = nn.dtypes.promote_dtype(
+        inputs, kernel_params, bias_params = promote_dtype(
             inputs, kernel_params, bias_params, dtype=self.dtype
         )
 
@@ -275,20 +275,20 @@ class DenseGateSymmetricTensor(nn.module.Module):
     axis: int | Sequence[int] = -2
     use_bias: bool = True
     dtype: jnp.dtype | None = None
-    param_dtype: jnp.dtype | None = float
+    param_dtype: DTypeLike | None = float
     precision: None | str | jax.lax.Precision | tuple[str, str] | tuple[
         jax.lax.Precision, jax.lax.Precision
     ] = None
     kernel_init: Callable[
-        [jax.random.PRNGKey, tuple[int, int], Any], Any
+        [jax.Array, tuple[int, int], Any], Any
     ] = nn.initializers.lecun_normal()
     bias_init: Callable[
-        [jax.random.PRNGKey, tuple[int], Any], Any
+        [jax.Array, tuple[int], Any], Any
     ] = nn.initializers.zeros_init()
     dot_general: Callable[..., Any] = jax.lax.dot_general
 
     @nn.compact
-    def __call__(self, inputs, tensor_basis: jnp.ndarray | None = None):
+    def __call__(self, inputs: jax.Array, tensor_basis: jax.Array | None = None, *args, **kwargs) -> jax.Array:  # type: ignore
         features = canonicalize_tuple(self.features)
         axis = canonicalize_tuple(self.axis)
         ndim = inputs.ndim
@@ -319,7 +319,7 @@ class DenseGateSymmetricTensor(nn.module.Module):
             bias = self.param("bias_params", self.bias_init, features)
         else:
             bias = None
-        inputs, kernel_params, bias = nn.dtypes.promote_dtype(
+        inputs, kernel_params, bias = promote_dtype(
             inputs, kernel_params, bias, dtype=self.dtype
         )
 
@@ -369,19 +369,19 @@ class GRUCellSymmetricTensor(nn.RNNCellBase):
     bias_rep: SymmetricTensorRepresentation
     features: int | Sequence[int]
 
-    gate_fn: Callable[..., Any] = nn.activation.sigmoid
-    activation_fn: Callable[..., Any] = nn.activation.tanh
+    gate_fn: Callable[..., Any] = jax.nn.sigmoid
+    activation_fn: Callable[..., Any] = jax.nn.tanh
     kernel_init: Callable[
-        [jax.random.PRNGKey, tuple[int, int], Any], Any
+        [jax.Array, tuple[int, int], Any], Any
     ] = nn.initializers.lecun_normal()
     recurrent_kernel_init: Callable[
-        [jax.random.PRNGKey, tuple[int, int], Any], Any
+        [jax.Array, tuple[int, int], Any], Any
     ] = nn.initializers.orthogonal()
     bias_init: Callable[
-        [jax.random.PRNGKey, tuple[int], Any], Any
+        [jax.Array, tuple[int], Any], Any
     ] = nn.initializers.zeros_init()
     dtype: jnp.dtype | None = None
-    param_dtype: jnp.dtype | None = float
+    param_dtype: DTypeLike | None = float
     carry_init: nn.initializers.Initializer = nn.initializers.zeros_init()
 
     def setup(self):
@@ -390,37 +390,18 @@ class GRUCellSymmetricTensor(nn.RNNCellBase):
         )
 
     @nn.compact
-    def __call__(self, carry, inputs):
+    def __call__(self, carry: jax.Array, inputs: jax.Array, *args, **kwargs) -> tuple[jax.Array, jax.Array]:  # type: ignore
         """Gated recurrent unit (GRU) cell.
         :param carry: the previous output of the GRU cell.
-        :type carry: jnp.ndarray
+        :type carry: jax.Array
         :param inputs: the input to the GRU cell.
-        :type inputs: jnp.ndarray
+        :type inputs: jax.Array
         :return: the new output of the GRU cell.
-        :rtype: jnp.ndarray
+        :rtype: jax.Array
         """
         h = carry
 
         # input and recurrent layers are summed so only one needs a bias.
-        dense_h = partial(
-            DenseGateSymmetricTensor,
-            kernel_rep=self.bias_rep,
-            features=self.features,
-            use_bias=False,
-            dtype=self.dtype,
-            param_dtype=self.param_dtype,
-            kernel_init=self.recurrent_kernel_init,
-        )
-        dense_i = partial(
-            DenseGateSymmetricTensor,
-            kernel_rep=self.bias_rep,
-            features=self.features,
-            use_bias=True,
-            dtype=self.dtype,
-            param_dtype=self.param_dtype,
-            kernel_init=self.kernel_init,
-            bias_init=self.bias_init,
-        )
         gate_dense = partial(
             DenseGateSymmetricTensor,
             kernel_rep=self.bias_rep,
@@ -443,37 +424,31 @@ class GRUCellSymmetricTensor(nn.RNNCellBase):
 
         r = jnp.expand_dims(
             self.gate_fn(
-                gate_dense(name="ir", use_bias=True, kernel_init=self.kernel_init)(
-                    inputs
-                )
-                + gate_dense(
-                    name="hr", use_bias=False, kernel_init=self.recurrent_kernel_init
-                )(h)
+                gate_dense(use_bias=True, kernel_init=self.kernel_init)(inputs)
+                + gate_dense(use_bias=False, kernel_init=self.recurrent_kernel_init)(h)
             ),
             -1,
         )
 
         z = jnp.expand_dims(
             self.gate_fn(
-                gate_dense(name="iz", use_bias=True, kernel_init=self.kernel_init)(
-                    inputs
-                )
-                + gate_dense(
-                    name="hz", use_bias=False, kernel_init=self.recurrent_kernel_init
-                )(h)
+                gate_dense(use_bias=True, kernel_init=self.kernel_init)(inputs)
+                + gate_dense(use_bias=False, kernel_init=self.recurrent_kernel_init)(h)
             ),
             -1,
         )
 
         n = TensorActivation(self.activation_fn, self.feature_notation)(
-            tensor_dense(name="in", kernel_init=self.kernel_init)(inputs)
-            + r * tensor_dense(name="hn", kernel_init=self.recurrent_kernel_init)(h)
+            tensor_dense(kernel_init=self.kernel_init)(inputs)
+            + r * tensor_dense(kernel_init=self.recurrent_kernel_init)(h)
         )
         new_h = (1.0 - z) * n + z * h
         return new_h, new_h
 
     @nn.nowrap
-    def initialize_carry(self, rng: jax.random.PRNGKey, input_shape: tuple[int, ...]):
+    def initialize_carry(
+        self, rng: jax.Array, input_shape: tuple[int, ...]
+    ) -> jax.Array:
         """Initialize the RNN cell carry.
 
         Args:

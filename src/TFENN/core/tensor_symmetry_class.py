@@ -1,4 +1,4 @@
-# Copyright 2023 Kévin Garanger
+# Copyright 2024 Kévin Garanger
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,9 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import abc
 import dataclasses
 import logging
+from collections.abc import Mapping
 
 from jax import numpy as jnp
 from jax.experimental import sparse
@@ -37,9 +40,9 @@ class TensorSymmetryClassType(EnumInputClass):
 
     @classmethod
     @property
-    def obj_map(
+    def obj_map(  # type: ignore
         cls,
-    ) -> dict["TensorSymmetryClassType", "TensorSymmetryClass"]:
+    ) -> Mapping[TensorSymmetryClassType, type[TensorSymmetryClass]]:
         return {
             cls.ISOTROPIC: IsotropicSymmetryClass,
             cls.CUBIC: CubicSymmetryClass,
@@ -231,9 +234,9 @@ class HexagonalSymmetryClass(TensorSymmetryClass):
         if self.dim == 2:
             return CubicSymmetryClass(dim=2, order=4).mandel_tensor_basis
         elif self.dim == 3:
-            if order == 2:
+            if self.order == 2:
                 raise NotImplementedError
-            elif order == 4:
+            elif self.order == 4:
                 return sparse.BCOO(
                     (
                         jnp.array((1,) * 12 + (-1,)),
@@ -279,9 +282,9 @@ class TetragonalSymmetryClass(TensorSymmetryClass):
         if self.dim == 2:
             return CubicSymmetryClass(dim=2, order=4).mandel_tensor_basis
         elif self.dim == 3:
-            if order == 2:
+            if self.order == 2:
                 raise NotImplementedError
-            elif order == 4:
+            elif self.order == 4:
                 return sparse.BCOO(
                     (
                         jnp.array((1,) * 14 + (-1,) * 2),

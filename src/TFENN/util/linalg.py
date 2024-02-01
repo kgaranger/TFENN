@@ -1,4 +1,4 @@
-# Copyright 2023 Kévin Garanger
+# Copyright 2024 Kévin Garanger
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,17 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections import namedtuple
 from functools import partial
+from typing import NamedTuple
 
-from jax import jit
+from jax import Array, jit
 from jax import numpy as jnp
+
+
+class EighResult(NamedTuple):
+    """Copied from jax.numpy.linalg"""
+
+    eigenvalues: Array
+    eigenvectors: Array
 
 
 @partial(jit, static_argnames=("UPLO", "symmetrize_input", "add_epsilon"))
 def _eigh_2x2(
-    C: jnp.ndarray, UPLO=None, symmetrize_input=True, add_epsilon: bool = False
-) -> namedtuple:
+    C: Array,
+    UPLO: str | None = None,
+    symmetrize_input: bool = True,
+    add_epsilon: bool = False,
+) -> EighResult:
     """Eigenvalues and eigenvectors of a 2x2 hermitian matrix.
     For some reason, this version seems to be more robsut to nan errors than the
     original jax version.
@@ -61,13 +71,16 @@ def _eigh_2x2(
         eigvecs += jnp.eye(2) * (alpha / (alpha + eigvecs_sn))
 
     eigvecs = eigvecs / jnp.linalg.norm(eigvecs, axis=-2, keepdims=True)
-    return namedtuple("Eigh", ["eigenvalues", "eigenvectors"])(eigvals, eigvecs)
+    return EighResult(eigvals, eigvecs)
 
 
 @partial(jit, static_argnames=("UPLO", "symmetrize_input", "add_epsilon"))
 def eigh(
-    a: jnp.ndarray, UPLO=None, symmetrize_input: bool = True, add_epsilon: bool = False
-) -> namedtuple:
+    a: Array,
+    UPLO: str | None = None,
+    symmetrize_input: bool = True,
+    add_epsilon: bool = False,
+) -> EighResult:
     """Eigenvalues and eigenvectors of a symmetric matrix."""
 
     if a.shape[-2:] == (2, 2):

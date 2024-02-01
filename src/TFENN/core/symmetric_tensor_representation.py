@@ -1,4 +1,4 @@
-# Copyright 2023 Kévin Garanger
+# Copyright 2024 Kévin Garanger
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,23 +12,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import abc
 import dataclasses
 import logging
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from itertools import product
 from math import prod
+from typing import overload
 
 import jax
 import numpy as np
 from jax import numpy as jnp
 from jax import typing as jnpt
+from jax.experimental.sparse import JAXSparse, todense
 from numpy import typing as npt
 
 from TFENN.util.array_util import canonicalize_tuple, normalize_axes
 from TFENN.util.enum_input import EnumInputClass
 
 from .tensor_symmetry_class import TensorSymmetryClass, TensorSymmetryClassType
+
+GenericArray = jax.Array | JAXSparse | np.ndarray
 
 
 class SymmetricTensorNotationType(EnumInputClass):
@@ -40,9 +46,9 @@ class SymmetricTensorNotationType(EnumInputClass):
 
     @classmethod
     @property
-    def obj_map(
+    def obj_map(  # type: ignore
         cls,
-    ) -> dict["SymmetricTensorNotationType", "SymmetricTensorNotation"]:
+    ) -> Mapping[SymmetricTensorNotationType, type[SymmetricTensorNotation]]:
         return {
             cls.FULL: FullNotation,
             cls.VOIGT: VoigtNotation,
@@ -137,9 +143,27 @@ class SymmetricTensorNotation(abc.ABC):
         """
         return None
 
+    @overload
     def to_reduced(
-        self, tensors: jnpt.ArrayLike, tensors_axis: int | Sequence[int] | None = None
+        self, tensors: jax.Array, tensors_axis: int | Sequence[int] | None = None
     ) -> jax.Array:
+        ...
+
+    @overload
+    def to_reduced(
+        self, tensors: JAXSparse, tensors_axis: int | Sequence[int] | None = None
+    ) -> JAXSparse:
+        ...
+
+    @overload
+    def to_reduced(
+        self, tensors: np.ndarray, tensors_axis: int | Sequence[int] | None = None
+    ) -> np.ndarray:
+        ...
+
+    def to_reduced(
+        self, tensors: GenericArray, tensors_axis: int | Sequence[int] | None = None
+    ) -> GenericArray:
         """Convert an array containing tensors in full notation to their reduced
         notations.
         :param tensors: tensors to be converted
@@ -153,7 +177,7 @@ class SymmetricTensorNotation(abc.ABC):
         if tensors_axis is None:
             tensors_axis = range(-self.order, 0)
         tensors_axis = canonicalize_tuple(tensors_axis)
-        ndim = jnp.ndim(tensors)
+        ndim = jnp.ndim(tensors)  # type: ignore (jnp.ndim works with sparse arrays even if not in type signature)
         tensors_axis = normalize_axes(tensors_axis, ndim)
         indices = iter(self.to_reduced_indices)
         slices = tuple(
@@ -167,23 +191,41 @@ class SymmetricTensorNotation(abc.ABC):
                 self.to_reduced_scaling, non_tensors_axis
             )
 
+    @overload
     def to_full(
-        self, tensors: jnpt.ArrayLike, tensors_axis: int | Sequence[int] | None = None
+        self, tensors: jax.Array, tensors_axis: int | Sequence[int] | None = None
     ) -> jax.Array:
+        ...
+
+    @overload
+    def to_full(
+        self, tensors: JAXSparse, tensors_axis: int | Sequence[int] | None = None
+    ) -> JAXSparse:
+        ...
+
+    @overload
+    def to_full(
+        self, tensors: np.ndarray, tensors_axis: int | Sequence[int] | None = None
+    ) -> np.ndarray:
+        ...
+
+    def to_full(
+        self, tensors: GenericArray, tensors_axis: int | Sequence[int] | None = None
+    ) -> GenericArray:
         """Convert an array containing tensors in reduced notation to ther full
         notation.
         :param tensors: tensors to be converted
-        :type tensors: jnpt.ArrayLike
+        :type tensors: GenericArray
         :param tensors_axis: axes of the tensors to be converted, if None, the last axes
           are used, defaults to None
         :type tensors_axis: int or Sequence[int] or None
         :return: full notation of the tensors
-        :rtype: jax.Array
+        :rtype: GenericArray
         """
         if tensors_axis is None:
             tensors_axis = range(-len(self.reduced_shape), 0)
         tensors_axis = canonicalize_tuple(tensors_axis)
-        ndim = jnp.ndim(tensors)
+        ndim = jnp.ndim(tensors)  # type: ignore (same as in to_reduced)
         tensors_axis = normalize_axes(tensors_axis, ndim)
         indices = iter(self.to_full_indices)
         slices = tuple(
@@ -250,7 +292,7 @@ class VoigtNotation(SymmetricTensorNotation):
         return (self.dim * (self.dim + 1) // 2,) * (self.order // 2)
 
     @property
-    def tensor_indices_lists(self) -> tuple[list[int], ...]:
+    def tensor_indices_lists(self) -> tuple[npt.NDArray, npt.NDArray]:
         """Return the tuple of indices lists of the tensor notation per axis,
         based on the Voigt notation notation.
         :return: The tuple of indices lists of the tensor notation per axis.
@@ -282,10 +324,10 @@ class VoigtNotation(SymmetricTensorNotation):
         dir_idx = 0
         i, j = -1, -1
         for k in range(self.dim):
-            for l in range(self.dim - k):
+            for kk in range(self.dim - k):
                 i += dir_cycle[dir_idx][0]
                 j += dir_cycle[dir_idx][1]
-                mat[i, j] = k * self.dim - k * (k - 1) // 2 + l
+                mat[i, j] = k * self.dim - k * (k - 1) // 2 + kk
             dir_idx = (dir_idx + 1) % 3
 
         for i in range(1, self.dim):
@@ -356,10 +398,10 @@ class MandelNotation(VoigtNotation):
         :return: The scaling factors for the Mandel notation notation of the
         :rtype: list[float]
         """
-        l = [1.0] * self.dim + [np.sqrt(2.0)] * (self.voigt_dim - self.dim)
+        rsl = [1.0] * self.dim + [np.sqrt(2.0)] * (self.voigt_dim - self.dim)
 
-        self.logger.debug(f"Mandel scaling list:\n{l}")
-        return l
+        self.logger.debug(f"Mandel scaling list:\n{rsl}")
+        return rsl
 
     @property
     def full_scaling_matrix(self) -> npt.NDArray:
@@ -436,10 +478,10 @@ class SymmetricTensorRepresentation:
         return self.sym_cls.basis_size
 
     @property
-    def tensor_basis(self) -> jax.Array:
-        if type(self.notation) == MandelNotation:
+    def tensor_basis(self) -> JAXSparse:
+        if self.notation is MandelNotation:
             return self.sym_cls.mandel_tensor_basis
-        elif type(self.notation) == FullNotation:
+        elif self.notation is FullNotation:
             return MandelNotation(dim=self.dim, order=self.order).to_full(
                 self.sym_cls.mandel_tensor_basis
             )
@@ -469,7 +511,7 @@ class SymmetricTensorRepresentation:
         ndim = jnp.ndim(params)
         (params_axis,) = normalize_axes((params_axis,), ndim)
         if basis is None:
-            basis = self.tensor_basis.todense()
+            basis = todense(self.tensor_basis)
         return jnp.einsum(
             params,
             range(ndim),
@@ -499,7 +541,7 @@ class SymmetricTensorRepresentation:
     def tensors_to_params(
         self,
         tensors: jnpt.ArrayLike,
-        tensors_axis: tuple[int, ...] = None,
+        tensors_axis: tuple[int, ...] | None = None,
         basis: jnpt.ArrayLike | None = None,
     ) -> jax.Array:
         """Return the parameters of the given array of tensor notations.
@@ -513,12 +555,15 @@ class SymmetricTensorRepresentation:
         :return: the parameters of the given tensor notations
         :rtype: jax.Array
         """
+        tensors = jnp.asarray(tensors)
         ndim = jnp.ndim(tensors)
         if tensors_axis is None:
             tensors_axis = tuple(range(-self.order // 2, 0))
         tensors_axis = normalize_axes(tensors_axis, ndim)
         if basis is None:
-            basis = self.tensor_basis.todense()
+            basis = todense(self.tensor_basis)
+        else:
+            basis = jnp.asarray(basis)
 
         ts = jnp.reshape(
             jnp.moveaxis(tensors, tensors_axis, range(-self.order // 2, 0)),
@@ -539,7 +584,7 @@ class SymmetricTensorRepresentation:
 
     def full_tensors_to_params(
         self,
-        tensors: jnpt.ArrayLike,
+        tensors: jax.Array,
         tensors_axis: tuple[int, ...] | None = None,
         basis: jnpt.ArrayLike | None = None,
     ) -> jax.Array:

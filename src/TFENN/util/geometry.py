@@ -1,4 +1,4 @@
-# Copyright 2023 Kévin Garanger
+# Copyright 2024 Kévin Garanger
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,10 +14,9 @@
 
 from jax import Array
 from jax import numpy as jnp
-from jax.typing import ArrayLike
 
 
-def cross_product_mat(v: ArrayLike) -> Array:
+def cross_product_mat(v: Array) -> Array:
     return jnp.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
 
 
@@ -27,7 +26,7 @@ def angle_to_rot_mat_2d(angle: float) -> Array:
     )
 
 
-def axis_angle_to_rot_mat_3d(axis: ArrayLike, angle: float) -> Array:
+def axis_angle_to_rot_mat_3d(axis: Array, angle: float) -> Array:
     axis = axis / jnp.linalg.norm(axis)
     return (
         jnp.cos(angle) * jnp.eye(3)
@@ -36,7 +35,7 @@ def axis_angle_to_rot_mat_3d(axis: ArrayLike, angle: float) -> Array:
     )
 
 
-def quat_to_rot_mat_3d(quat: ArrayLike) -> Array:
+def quat_to_rot_mat_3d(quat: Array) -> Array:
     return jnp.array(
         [
             [

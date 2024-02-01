@@ -1,4 +1,4 @@
-# Copyright 2023 Kévin Garanger
+# Copyright 2024 Kévin Garanger
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,7 +13,12 @@
 # limitations under the License.
 
 import abc
+from collections.abc import Mapping
 from enum import Enum
+from typing import Callable, TypeVar
+
+EnumType = TypeVar("EnumType", bound=Enum)
+# ClassType = TypeVar("ClassType", bound=abc.ABC)
 
 
 class EnumInputClass(Enum):
@@ -32,7 +37,7 @@ class EnumInputClass(Enum):
     @classmethod
     @property
     @abc.abstractmethod
-    def obj_map(cls) -> dict[Enum, object]:
+    def obj_map(cls: type[EnumType]) -> Mapping[EnumType, type[object]]:
         pass
 
     def create(
@@ -59,12 +64,12 @@ class EnumInputFun(Enum):
     @classmethod
     @property
     @abc.abstractmethod
-    def fun_map(cls) -> dict[Enum, callable]:
+    def fun_map(cls: type[EnumType]) -> Mapping[EnumType, Callable]:
         pass
 
     def create(
         self,
         *args,
         **kwargs,
-    ) -> callable:
+    ) -> Callable:
         return self.fun_map[self]
