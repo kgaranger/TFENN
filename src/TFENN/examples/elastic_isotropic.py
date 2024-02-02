@@ -30,7 +30,9 @@ from TFENN.core import (DenseSymmetricTensor, MandelNotation,
 jax.config.update("jax_enable_x64", True)
 jax.config.update("jax_debug_nans", True)
 
-# dataset_path = Path("data/neohookean_train.csv")  # Download link: http://tinyurl.com/2np8b8zm
+dataset_path = Path(
+    "data/neohookean_train.csv"
+)  # Download link: http://tinyurl.com/2np8b8zm
 dim = 3
 reduced_dim = dim * (dim + 1) // 2
 dataset_in_cols = (0, 1, 2, 3, 4, 5)
