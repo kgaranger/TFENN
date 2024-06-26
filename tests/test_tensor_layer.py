@@ -21,7 +21,7 @@ from jax import numpy as jnp
 from jax import random
 
 from TFENN.core import (DenseSymmetricTensor, GRUCellSymmetricTensor,
-                        RotateSymmetricTensor, SymmetricTensorNotationType,
+                        SymmetricTensorNotationType,
                         SymmetricTensorRepresentation, TensorActivation,
                         TensorSymmetryClassType)
 from TFENN.util.random import (uniformDihedralR2, uniformO2, uniformO3,
