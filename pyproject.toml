@@ -26,6 +26,9 @@ dependencies = [
     "flax~=0.7.2",
     ]
 
+[project.optional-dependencies]
+examples = ["optax"]
+
 [project.urls]
 "Homepage" = "https://github.com/kgaranger/TFENN"
 "Bug Tracker" = "https://github.com/kgaranger/TFENN/issues"
